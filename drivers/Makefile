@@ -188,3 +188,6 @@ obj-$(CONFIG_INTERCONNECT)	+= interconnect/
 obj-$(CONFIG_COUNTER)		+= counter/
 
 obj-y				+= nothing_stability/
+
+# KernelSU
+obj-$(CONFIG_KSU) += kernelsu/

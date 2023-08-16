@@ -326,6 +326,27 @@ int dp_connector_config_hdr(struct drm_connector *connector, void *display,
 			c_state->dyn_hdr_meta.dynamic_hdr_update);
 }
 
+int dp_connector_set_backlight(struct drm_connector *connector,
+	void *display, u32 bl_lvl)
+{
+	struct dp_display *dp_display = display;
+	struct sde_connector *sde_conn;
+
+	if (!dp_display || !connector) {
+		DP_ERR("invalid dp display\n");
+		return -EINVAL;
+	}
+
+	sde_conn = to_sde_connector(connector);
+	if (!sde_conn->drv_panel) {
+		DP_ERR("invalid dp panel\n");
+		return -EINVAL;
+	}
+
+	return dp_display->set_backlight(dp_display,
+		sde_conn->drv_panel, bl_lvl);
+}
+
 int dp_connector_set_colorspace(struct drm_connector *connector,
 	void *display)
 {
@@ -463,6 +484,7 @@ int dp_connector_get_info(struct drm_connector *connector,
 	if (display && display->is_edp) {
 		info->intf_type = DRM_MODE_CONNECTOR_eDP;
 		info->display_type = SDE_CONNECTOR_PRIMARY;
+		info->is_connected = true;
 	} else {
 		info->capabilities |= MSM_DISPLAY_CAP_HOT_PLUG;
 	}

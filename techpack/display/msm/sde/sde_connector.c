@@ -145,12 +145,12 @@ static int sde_backlight_device_update_status(struct backlight_device *bd)
 	/* map UI brightness into driver backlight level with rounding */
 	bl_lvl = mult_frac(brightness, bl_max_level, brightness_max_level);
 
-	display->panel->bl_config.real_bl_level = bl_lvl;
+	dsi_display->panel->bl_config.real_bl_level = bl_lvl;
 
 	/*if enable hbm_mode, set brightness to HBM brightness*/
 	if (finger_hbm_flag || hbm_mode_flag) {
 		SDE_ERROR("update hbm brightness\n");
-		bl_lvl = display->panel->bl_config.bl_hbm_level;
+		bl_lvl = dsi_display->panel->bl_config.bl_hbm_level;
 	}
 
 	if (!bl_lvl && brightness)

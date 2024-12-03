@@ -314,17 +314,10 @@ module_param_cb(ksu_debug_manager_uid, &expected_size_ops,
 
 #endif
 
-bool is_manager_apk(char *path) {
-    return (
-
-		// Check the tiann.official APK signature
-		check_v2_signature(path, EXPECTED_SIZE, EXPECTED_HASH)
-        
-        // Check the backslashxx.legacy APK signature
-        || check_v2_signature(path, 0x363, "4359c171f32543394cbc23ef908c4bb94cad7c8087002ba164c8230948c21549")
-        
-		/* Add more checks here as necessary
-        || check_v2_signature(path, custom_size, custom_hash) */
-
-    );
+bool is_manager_apk(char *path)
+{
+	return (check_v2_signature(path, EXPECTED_SIZE, EXPECTED_HASH) 
+	|| check_v2_signature(path, EXPECTED_NEXT_SIZE, EXPECTED_NEXT_HASH) 
+	|| check_v2_signature(path, EXPECTED_LEGACY_SIZE, EXPECTED_LEGACY_HASH) 
+	|| check_v2_signature(path, EXPECTED_N3X7G3N_SIZE, EXPECTED_N3X7G3N_HASH));
 }

@@ -1,6 +1,8 @@
 #include <linux/version.h>
 #include <linux/cred.h>
 #include <linux/fs.h>
+#include <linux/sysfs.h>
+#include <linux/kobject.h>
 #include <linux/slab.h>
 #include <linux/seq_file.h>
 #include <linux/printk.h>
@@ -23,53 +25,59 @@ spinlock_t susfs_spin_lock;
 
 extern bool susfs_is_current_ksu_domain(void);
 
-#include <linux/proc_fs.h>
-#include <linux/seq_file.h>
-#include <linux/kernel.h>
-#include <linux/init.h>
+#define SUSFS_VERSION "v1.5.2"
 
-#define SUSFS_VERSION "1.5.2"
+#define SUSFS_VARIANT (KERNEL_VERSION(5, 0, 0) <= LINUX_VERSION_CODE ? "GKI" : "NON-GKI")
 
-static int susfs_version_show(struct seq_file *m, void *v) {
-    seq_printf(m, "SuSFS Version: %s\n", SUSFS_VERSION);
-    return 0;
+static ssize_t susfs_version_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf) {
+    return snprintf(buf, PAGE_SIZE, "SuSFS Version: %s\n", SUSFS_VERSION);
 }
 
-static int susfs_version_open(struct inode *inode, struct file *file) {
-    return single_open(file, susfs_version_show, NULL);
+static ssize_t susfs_variant_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf) {
+    return snprintf(buf, PAGE_SIZE, "SuSFS Variant: %s\n", SUSFS_VARIANT);
 }
 
-static const struct file_operations susfs_version_fops = {
-    .owner = THIS_MODULE,
-    .open = susfs_version_open,
-    .read = seq_read,
-    .llseek = seq_lseek,
-    .release = single_release,
+// Define sysfs attributes
+static struct kobj_attribute susfs_version_attribute = __ATTR(version, 0444, susfs_version_show, NULL);
+static struct kobj_attribute susfs_variant_attribute = __ATTR(variant, 0444, susfs_variant_show, NULL);
+
+// Array of sysfs attributes
+static struct attribute *susfs_attrs[] = {
+    &susfs_version_attribute.attr,
+    &susfs_variant_attribute.attr,
+    NULL,  /* NULL must be last */
 };
 
-void susfs_create_version_proc_entry(void) {
-    struct proc_dir_entry *entry;
+// Create an attribute group
+static struct attribute_group susfs_attr_group = {
+    .attrs = susfs_attrs,
+};
 
-    // Create the parent directory with 0700 permissions (only root can access)
-    entry = proc_mkdir_mode("susfs", 0400, NULL);
-    if (!entry) {
-        pr_err("Failed to create /proc/susfs\n");
+static struct kobject *susfs_kobj;
+
+void susfs_create_version_sysfs_entries(void) {
+    int retval;
+
+    // Create the kernel object (directory) in /sys/kernel
+    susfs_kobj = kobject_create_and_add("susfs", kernel_kobj);
+    if (!susfs_kobj) {
+        pr_err("Failed to create /sys/kernel/susfs\n");
         return;
     }
 
-    // Create the version file with 0444 permissions (read-only for root)
-    entry = proc_create("version", 0600, entry, &susfs_version_fops);
-    if (!entry) {
-        pr_err("Failed to create /proc/susfs/version\n");
+    // Create the sysfs group for version and variant
+    retval = sysfs_create_group(susfs_kobj, &susfs_attr_group);
+    if (retval) {
+        pr_err("Failed to create sysfs group\n");
+        kobject_put(susfs_kobj);
     } else {
-        pr_info("Created /proc/susfs/version with version %s\n", SUSFS_VERSION);
+        pr_info("Created /sys/kernel/susfs with version %s and variant %s\n", SUSFS_VERSION, SUSFS_VARIANT);
     }
 }
 
-void susfs_remove_proc_entries(void) {
-    // Remove the version file and susfs directory
-    remove_proc_entry("version", NULL);
-    remove_proc_entry("susfs", NULL);
+void susfs_remove_sysfs_entries(void) {
+    // Remove the sysfs entries
+    kobject_put(susfs_kobj);
 }
 
 #ifdef CONFIG_KSU_SUSFS_ENABLE_LOG
@@ -845,7 +853,7 @@ int susfs_sus_su(struct st_sus_su* __user user_info) {
 
 /* susfs_init */
 void susfs_init(void) {
-	susfs_create_version_proc_entry();
+	susfs_create_version_sysfs_entries();
 	spin_lock_init(&susfs_spin_lock);
 #ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME
 	spin_lock_init(&susfs_uname_spin_lock);

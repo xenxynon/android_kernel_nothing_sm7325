@@ -23,6 +23,55 @@ spinlock_t susfs_spin_lock;
 
 extern bool susfs_is_current_ksu_domain(void);
 
+#include <linux/proc_fs.h>
+#include <linux/seq_file.h>
+#include <linux/kernel.h>
+#include <linux/init.h>
+
+#define SUSFS_VERSION "1.5.2"
+
+static int susfs_version_show(struct seq_file *m, void *v) {
+    seq_printf(m, "SuSFS Version: %s\n", SUSFS_VERSION);
+    return 0;
+}
+
+static int susfs_version_open(struct inode *inode, struct file *file) {
+    return single_open(file, susfs_version_show, NULL);
+}
+
+static const struct file_operations susfs_version_fops = {
+    .owner = THIS_MODULE,
+    .open = susfs_version_open,
+    .read = seq_read,
+    .llseek = seq_lseek,
+    .release = single_release,
+};
+
+void susfs_create_version_proc_entry(void) {
+    struct proc_dir_entry *entry;
+
+    // Create the parent directory with 0700 permissions (only root can access)
+    entry = proc_mkdir_mode("susfs", 0400, NULL);
+    if (!entry) {
+        pr_err("Failed to create /proc/susfs\n");
+        return;
+    }
+
+    // Create the version file with 0444 permissions (read-only for root)
+    entry = proc_create("version", 0600, entry, &susfs_version_fops);
+    if (!entry) {
+        pr_err("Failed to create /proc/susfs/version\n");
+    } else {
+        pr_info("Created /proc/susfs/version with version %s\n", SUSFS_VERSION);
+    }
+}
+
+void susfs_remove_proc_entries(void) {
+    // Remove the version file and susfs directory
+    remove_proc_entry("version", NULL);
+    remove_proc_entry("susfs", NULL);
+}
+
 #ifdef CONFIG_KSU_SUSFS_ENABLE_LOG
 bool is_log_enable __read_mostly = true;
 #define SUSFS_LOGI(fmt, ...) if (is_log_enable) pr_info("susfs:[%u][%d][%s] " fmt, current_uid().val, current->pid, __func__, ##__VA_ARGS__)
@@ -796,6 +845,7 @@ int susfs_sus_su(struct st_sus_su* __user user_info) {
 
 /* susfs_init */
 void susfs_init(void) {
+	susfs_create_version_proc_entry();
 	spin_lock_init(&susfs_spin_lock);
 #ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME
 	spin_lock_init(&susfs_uname_spin_lock);

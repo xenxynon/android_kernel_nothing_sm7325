@@ -1,8 +1,6 @@
 #include <linux/version.h>
 #include <linux/cred.h>
 #include <linux/fs.h>
-#include <linux/sysfs.h>
-#include <linux/kobject.h>
 #include <linux/slab.h>
 #include <linux/seq_file.h>
 #include <linux/printk.h>
@@ -24,61 +22,6 @@
 spinlock_t susfs_spin_lock;
 
 extern bool susfs_is_current_ksu_domain(void);
-
-#define SUSFS_VERSION "v1.5.2"
-
-#define SUSFS_VARIANT (KERNEL_VERSION(5, 0, 0) <= LINUX_VERSION_CODE ? "GKI" : "NON-GKI")
-
-static ssize_t susfs_version_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf) {
-    return snprintf(buf, PAGE_SIZE, "SuSFS Version: %s\n", SUSFS_VERSION);
-}
-
-static ssize_t susfs_variant_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf) {
-    return snprintf(buf, PAGE_SIZE, "SuSFS Variant: %s\n", SUSFS_VARIANT);
-}
-
-// Define sysfs attributes
-static struct kobj_attribute susfs_version_attribute = __ATTR(version, 0444, susfs_version_show, NULL);
-static struct kobj_attribute susfs_variant_attribute = __ATTR(variant, 0444, susfs_variant_show, NULL);
-
-// Array of sysfs attributes
-static struct attribute *susfs_attrs[] = {
-    &susfs_version_attribute.attr,
-    &susfs_variant_attribute.attr,
-    NULL,  /* NULL must be last */
-};
-
-// Create an attribute group
-static struct attribute_group susfs_attr_group = {
-    .attrs = susfs_attrs,
-};
-
-static struct kobject *susfs_kobj;
-
-void susfs_create_version_sysfs_entries(void) {
-    int retval;
-
-    // Create the kernel object (directory) in /sys/kernel
-    susfs_kobj = kobject_create_and_add("susfs", kernel_kobj);
-    if (!susfs_kobj) {
-        pr_err("Failed to create /sys/kernel/susfs\n");
-        return;
-    }
-
-    // Create the sysfs group for version and variant
-    retval = sysfs_create_group(susfs_kobj, &susfs_attr_group);
-    if (retval) {
-        pr_err("Failed to create sysfs group\n");
-        kobject_put(susfs_kobj);
-    } else {
-        pr_info("Created /sys/kernel/susfs with version %s and variant %s\n", SUSFS_VERSION, SUSFS_VARIANT);
-    }
-}
-
-void susfs_remove_sysfs_entries(void) {
-    // Remove the sysfs entries
-    kobject_put(susfs_kobj);
-}
 
 #ifdef CONFIG_KSU_SUSFS_ENABLE_LOG
 bool is_log_enable __read_mostly = true;
@@ -853,7 +796,6 @@ int susfs_sus_su(struct st_sus_su* __user user_info) {
 
 /* susfs_init */
 void susfs_init(void) {
-	susfs_create_version_sysfs_entries();
 	spin_lock_init(&susfs_spin_lock);
 #ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME
 	spin_lock_init(&susfs_uname_spin_lock);
@@ -861,7 +803,6 @@ void susfs_init(void) {
 #endif
 	SUSFS_LOGI("susfs is initialized!\n");
 }
-EXPORT_SYMBOL_GPL(susfs_init);
 
 /* No module exit is needed becuase it should never be a loadable kernel module */
 //void __init susfs_exit(void)

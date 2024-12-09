@@ -9,11 +9,12 @@
 #include <linux/seq_file.h>
 #include <linux/bootconfig.h>
 #include <linux/slab.h>
-#ifdef CONFIG_KSU_SUSFS_SPOOF_BOOTCONFIG
-#include <linux/susfs.h>
-#endif
 
 static char *saved_boot_config;
+
+#ifdef CONFIG_KSU_SUSFS_SPOOF_BOOTCONFIG
+extern int susfs_spoof_bootconfig(struct seq_file *m);
+#endif
 
 static int boot_config_proc_show(struct seq_file *m, void *v)
 {

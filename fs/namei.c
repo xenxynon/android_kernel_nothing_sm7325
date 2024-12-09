@@ -40,10 +40,6 @@
 #include <linux/init_task.h>
 #include <linux/uaccess.h>
 
-#ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
-#include <linux/susfs.h>
-#endif
-
 #include "internal.h"
 #include "mount.h"
 
@@ -3818,6 +3814,10 @@ static struct file *path_openat(struct nameidata *nd,
 	}
 	return ERR_PTR(error);
 }
+
+#ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
+extern struct filename* susfs_get_redirected_path(unsigned long ino);
+#endif
 
 struct file *do_filp_open(int dfd, struct filename *pathname,
 		const struct open_flags *op)

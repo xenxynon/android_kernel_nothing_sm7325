@@ -181,7 +181,7 @@ START=$(date +"%s")
 	   then
 	       make -kj$(nproc --all) O=out \
 	       ARCH=arm64 \
-	       LLVM=1 2>&1 | tee build.log
+	       LLVM=1 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_COMPAT=arm-linux-gnueabi- 2>&1 | tee build.log
 	elif [ -d ${KERNEL_DIR}/gcc64 ];
 	   then
 	       make -kj$(nproc --all) O=out \
@@ -245,6 +245,7 @@ function zipping() {
 
 cloneTC
 exports
+configs
 sticker
 compile
 END=$(date +"%s")

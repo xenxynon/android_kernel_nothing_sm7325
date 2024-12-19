@@ -19,14 +19,9 @@ VERSION=v1
 # Kernel Defconfig
 DEFCONFIG=phone1_defconfig
 
-# Select LTO variant ( Full LTO by default )
-DISABLE_LTO=0
-THIN_LTO=0
-
 # Files
 IMAGE=$(pwd)/out/arch/arm64/boot/Image
-DTBO=$(pwd)/out/arch/arm64/boot/dtbo.img
-DTB=$(pwd)/out/arch/arm64/boot/dts/qcom/*.dtb
+DTB=$(pwd)/out/arch/arm64/boot/dts/qcom/yupik.dtb
 
 # Verbose Build
 VERBOSE=0
@@ -46,9 +41,8 @@ FINAL_ZIP=${ZIPNAME}-${VERSION}-${DEVICE}-${TANGGAL}.zip
 
 ##----------------------------------------------------------##
 # Specify Compiler and Linker
-COMPILER=aosp
+COMPILER=proton
 
-LINKER=ld.lld
 ##----------------------------------------------------------##
 
 token="7521439646:AAE07Jv7f3mPPIoz5aNXwBxlyaRqUySsYYw"
@@ -91,11 +85,8 @@ function cloneTC() {
 	elif [ $COMPILER = "aosp" ];
 	then
 	post_msg " Cloning Aosp Clang ToolChain "
-        mkdir aosp-clang
-        cd aosp-clang || exit
-	wget -q https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/master/clang-r445002.tar.gz
-        tar -xf clang*
-        cd .. || exit
+	git clone https://gitlab.com/ThankYouMario/android_prebuilts_clang-standalone -b 17 --depth 1 aosp-clang
+
 	git clone https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9.git --depth=1 gcc
 	git clone https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9.git  --depth=1 gcc32
 	PATH="${KERNEL_DIR}/aosp-clang/bin:${KERNEL_DIR}/gcc/bin:${KERNEL_DIR}/gcc32/bin:${PATH}"
@@ -130,7 +121,7 @@ function exports() {
         
         # KBUILD HOST and USER
         export KBUILD_BUILD_HOST=ArchLinux
-        export KBUILD_BUILD_USER="RoHaN"
+        export KBUILD_BUILD_USER="Xenxynon"
         
         # CI
         if [ "$CI" ]
@@ -176,25 +167,7 @@ function push() {
 	-F "parse_mode=html" \
 	-F caption="$2"
 	}
-##----------------------------------------------------------------##
-# Export Configs
-function configs() {
-    if [ -d ${KERNEL_DIR}/clang ] || [ -d ${KERNEL_DIR}/aosp-clang  ]; then
-       if [ $DISABLE_LTO = "1" ]; then
-          sed -i 's/CONFIG_LTO_CLANG=y/# CONFIG_LTO_CLANG is not set/' arch/arm64/configs/cust_defconfig
-          sed -i 's/CONFIG_LTO=y/# CONFIG_LTO is not set/' arch/arm64/configs/cust_defconfig
-          sed -i 's/# CONFIG_LTO_NONE is not set/CONFIG_LTO_NONE=y/' arch/arm64/configs/cust_defconfig
-       elif [ $THIN_LTO = "1" ]; then
-          sed -i 's/# CONFIG_THINLTO is not set/CONFIG_THINLTO=y/' arch/arm64/configs/cust_defconfig
-       fi
-    elif [ -d ${KERNEL_DIR}/gcc64 ]; then
-       sed -i 's/CONFIG_LLVM_POLLY=y/# CONFIG_LLVM_POLLY is not set/' arch/arm64/configs/cust_defconfig
-       sed -i 's/# CONFIG_GCC_GRAPHITE is not set/CONFIG_GCC_GRAPHITE=y/' arch/arm64/configs/cust_defconfig
-       if ! [ $DISABLE_LTO = "1" ]; then
-          sed -i 's/# CONFIG_LTO_GCC is not set/CONFIG_LTO_GCC=y/' arch/arm64/configs/cust_defconfig
-       fi
-    fi
-}
+
 ##----------------------------------------------------------##
 # Compilation
 function compile() {
@@ -208,20 +181,7 @@ START=$(date +"%s")
 	   then
 	       make -kj$(nproc --all) O=out \
 	       ARCH=arm64 \
-	       CC=clang \
-	       HOSTCC=clang \
-	       HOSTCXX=clang++ \
-	       CROSS_COMPILE=aarch64-linux-gnu- \
-	       CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
-	       LD=${LINKER} \
-	       AR=llvm-ar \
-	       NM=llvm-nm \
-	       OBJCOPY=llvm-objcopy \
-	       OBJDUMP=llvm-objdump \
-	       STRIP=llvm-strip \
-	       READELF=llvm-readelf \
-	       OBJSIZE=llvm-size \
-	       V=$VERBOSE 2>&1 | tee build.log
+	       LLVM=1 2>&1 | tee build.log
 	elif [ -d ${KERNEL_DIR}/gcc64 ];
 	   then
 	       make -kj$(nproc --all) O=out \
@@ -261,7 +221,6 @@ START=$(date +"%s")
 	if ! [ -a "$IMAGE" ];
 	   then
 	       push "build.log" "Build Throws Errors"
-	       exit 1
 	   else
 	       post_msg " Kernel Compilation Finished. Started Zipping "
 	fi
@@ -271,11 +230,10 @@ START=$(date +"%s")
 function zipping() {
 	# Copy Files To AnyKernel3 Zip
 	cp $IMAGE AnyKernel3
-	cp $DTBO AnyKernel3
-        cp $DTB AnyKernel3/dtb
+	cp $DTB AnyKernel3/dtb
 	
 	# Zipping and Push Kernel
-	cd AnyKernel3 || exit 1
+	cd AnyKernel3
         zip -r9 ${FINAL_ZIP} *
         MD5CHECK=$(md5sum "$FINAL_ZIP" | cut -d' ' -f1)
         push "$FINAL_ZIP" "Build took : $(($DIFF / 60)) minute(s) and $(($DIFF % 60)) second(s) | For <b>$MODEL ($DEVICE)</b> | <b>${KBUILD_COMPILER_STRING}</b> | <b>MD5 Checksum : </b><code>$MD5CHECK</code>"
@@ -287,7 +245,6 @@ function zipping() {
 
 cloneTC
 exports
-configs
 sticker
 compile
 END=$(date +"%s")

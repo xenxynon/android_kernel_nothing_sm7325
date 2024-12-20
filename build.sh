@@ -11,6 +11,7 @@ export chat_id="-1002490515422"
 git clone --depth=1 https://gitlab.com/ThankYouMario/android_prebuilts_clang-standalone.git -b 17 clang
 git clone https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9.git --depth=1 gcc
 git clone https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9.git  --depth=1 gcc32
+LINKER=ld.lld
 
 # Host
 export KBUILD_COMPILER_STRING=$(${KERNEL_DIR}/clang/bin/clang --version | head -n 1 | perl -pe 's/\(http.*?\)//gs' | sed -e 's/  */ /g' -e 's/[[:space:]]*$//')
@@ -22,6 +23,7 @@ export IMAGE=out/arch/arm64/boot/Image
 export DTBO=out/arch/arm64/boot/dts/vendor/qcom/dtbo.img
 export DTB=out/arch/arm64/boot/dts/vendor/qcom/yupik.dtb
 export KERNEL_DIR="$(pwd)"
+export CI_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 
 # Device name
 export MODEL=Nothing
@@ -77,7 +79,7 @@ START=$(date +"%s")
 	# Compile
         make clean && make mrproper && rm -rf out
         make O=out ARCH=arm64 phone1_defconfig
-        make -kj$(nproc --all) O=out ARCH=arm64 LLVM_IAS=1 LLVM=1  CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=aarch64-linux-android- CROSS_COMPILE_COMPAT=arm-linux-androideabi- 2>&1 | tee build.log
+        make -kj$(nproc --all) O=out ARCH=arm64 LLVM_IAS=1 LLVM=1 LD=${LINKER} CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=aarch64-linux-android- CROSS_COMPILE_COMPAT=arm-linux-androideabi- 2>&1 | tee build.log
 }
 
 
@@ -102,8 +104,6 @@ function zip() {
         cd ..
         push "build.log" "Build Completed Successfully"
         }
-
-
 
 sticker
 compile

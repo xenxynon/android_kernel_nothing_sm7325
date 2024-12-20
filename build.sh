@@ -6,6 +6,12 @@
 export token="7521439646:AAE07Jv7f3mPPIoz5aNXwBxlyaRqUySsYYw"
 export chat_id="-1002490515422"
 
+
+# Toolchain
+git clone --depth=1 https://gitlab.com/ThankYouMario/android_prebuilts_clang-standalone.git -b 17 clang
+git clone https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9.git --depth=1 gcc
+git clone https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9.git  --depth=1 gcc32
+
 # Host
 export KBUILD_COMPILER_STRING=$(${KERNEL_DIR}/clang/bin/clang --version | head -n 1 | perl -pe 's/\(http.*?\)//gs' | sed -e 's/  */ /g' -e 's/[[:space:]]*$//')
 export KBUILD_BUILD_HOST="$(grep ^NAME= /etc/os-release | cut -d= -f2 | tr -d '"')"
@@ -31,11 +37,6 @@ export FINAL_ZIP=${ZIPNAME}-${VERSION}-${DEVICE}-${TANGGAL}.zip
 
 # AnyKernel3
 rm -rf AnyKernel && git clone https://github.com/xenxynon/AnyKernel3
-
-# Toolchain
-git clone --depth=1 https://gitlab.com/ThankYouMario/android_prebuilts_clang-standalone.git -b 17 clang
-git clone https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9.git --depth=1 gcc
-git clone https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9.git  --depth=1 gcc32
 
 
 function sticker() {
@@ -66,7 +67,6 @@ function finerr() {
         -d "disable_web_page_preview=true" \
         -d "parse_mode=markdown" \
         -d text="Build throw an error(s)"
-    exit 1
 }
 
 function compile() {
@@ -82,8 +82,12 @@ START=$(date +"%s")
 
 
 function zip() {
-        if ! [ -a "$IMAGE" ]; then
-            finerr
+           if ! [ -a "$IMAGE" ];
+	   then
+	       push "build.log" "Build Throws Errors"
+	       #exit 1
+	   else
+	       post_msg " Kernel Compilation Finished. Started Zipping "
         fi
 
 	cp $IMAGE AnyKernel3
@@ -92,7 +96,7 @@ function zip() {
 
 	# Zipping and Push Kernel
 	cd AnyKernel3 || exit 1
-        zip -r9 ${FINAL_ZIP} *
+        zip -r9 ${FINAL_ZIP} * -x  .git README.md
         MD5CHECK=$(md5sum "$FINAL_ZIP" | cut -d' ' -f1)
         push "$FINAL_ZIP" "Build took : $(($DIFF / 60)) minute(s) and $(($DIFF % 60)) second(s) | For <b>$MODEL ($DEVICE)</b> | <b>${KBUILD_COMPILER_STRING}</b> | <b>MD5 Checksum : </b><code>$MD5CHECK</code>"
         cd ..
@@ -102,5 +106,6 @@ function zip() {
 
 
 sticker
+compile
 zip
 push

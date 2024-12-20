@@ -190,5 +190,3 @@ obj-$(CONFIG_COUNTER)		+= counter/
 obj-$(CONFIG_KSU)		+= kernelsu/
 
 obj-y				+= nothing_stability/
-
-obj-$(CONFIG_KSU) += kernelsu/

@@ -11,12 +11,15 @@ export chat_id="-1002490515422"
 git clone --depth=1 https://gitlab.com/ThankYouMario/android_prebuilts_clang-standalone.git -b 17 clang
 git clone https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9.git --depth=1 gcc
 git clone https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9.git  --depth=1 gcc32
-LINKER=ld.lld
+export LINKER=ld.lld
 
 # Host
 export KBUILD_COMPILER_STRING=$(${KERNEL_DIR}/clang/bin/clang --version | head -n 1 | perl -pe 's/\(http.*?\)//gs' | sed -e 's/  */ /g' -e 's/[[:space:]]*$//')
 export KBUILD_BUILD_HOST="$(grep ^NAME= /etc/os-release | cut -d= -f2 | tr -d '"')"
 export KBUILD_BUILD_USER="xenxynon"
+export COMMIT_HEAD=$(git log --oneline -1)
+export VERSION=v1
+export DISTRO=$(source /etc/os-release && echo "${NAME}")
 
 # files
 export IMAGE=out/arch/arm64/boot/Image
@@ -74,7 +77,7 @@ function finerr() {
 function compile() {
 START=$(date +"%s")
 	# Push Notification
-	post_msg "<b>$KBUILD_BUILD_VERSION CI Build Triggered</b>%0A<b>Docker OS: </b><code>$DISTRO</code>%0A<b>Kernel Version : </b><code>$KERVER</code>%0A<b>Date : </b><code>$(TZ=Asia/Kolkata date)</code>%0A<b>Device : </b><code>$MODEL [$DEVICE]</code>%0A<b>Pipeline Host : </b><code>$KBUILD_BUILD_HOST</code>%0A<b>Host Core Count : </b><code>$PROCS</code>%0A<b>Compiler Used : </b><code>$KBUILD_COMPILER_STRING</code>%0A<b>Linker : </b><code>$LINKER</code>%0a<b>Branch : </b><code>$CI_BRANCH</code>%0A<b>Top Commit : </b><a href='$CL'>$COMMIT_HEAD</a>"
+	post_msg "<b>$KBUILD_BUILD_VERSION Kernel Build Triggered</b>%0A<b>Docker OS: </b><code>$DISTRO</code>%0A<b>Kernel Version : </b><code>$KERVER</code>%0A<b>Date : </b><code>$(TZ=Asia/Kolkata date)</code>%0A<b>Device : </b><code>$MODEL [$DEVICE]</code>%0A<b>Pipeline Host : </b><code>$KBUILD_BUILD_HOST</code>%0A<b>Host Core Count : </b><code>$PROCS</code>%0A<b>Compiler Used : </b><code>$KBUILD_COMPILER_STRING</code>%0A<b>Linker : </b><code>$LINKER</code>%0a<b>Branch : </b><code>$CI_BRANCH</code>%0A<b>HEAD : </b><a href='$CL'>$COMMIT_HEAD</a>"
 
 	# Compile
         make clean && make mrproper && rm -rf out
@@ -97,7 +100,7 @@ function zip() {
         cp $DTB AnyKernel3/dtb
 
 	# Zipping and Push Kernel
-	cd AnyKernel3 || exit 1
+	cd AnyKernel3
         zip -r9 ${FINAL_ZIP} * -x  .git README.md
         MD5CHECK=$(md5sum "$FINAL_ZIP" | cut -d' ' -f1)
         push "$FINAL_ZIP" "Build took : $(($DIFF / 60)) minute(s) and $(($DIFF % 60)) second(s) | For <b>$MODEL ($DEVICE)</b> | <b>${KBUILD_COMPILER_STRING}</b> | <b>MD5 Checksum : </b><code>$MD5CHECK</code>"

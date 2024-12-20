@@ -145,3 +145,9 @@ x509.genkey
 
 # Clang's compilation database file
 /compile_commands.json
+
+# Ignore build stuff
+build.log
+gcc*
+AnyKernel3
+clang

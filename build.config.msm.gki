@@ -4,7 +4,7 @@
 function generate_defconfig() {
 	${KERNEL_DIR}/scripts/gki/generate_defconfig.sh ${DEFCONFIG}
 }
-DEFCONFIG=vendor/${MSM_ARCH}-${VARIANT}_defconfig
+DEFCONFIG=phone1_defconfig
 append_cmd PRE_DEFCONFIG_CMDS 'generate_defconfig'
 
 if [ -z "${GKI_RAMDISK_PREBUILT_BINARY}" ]; then

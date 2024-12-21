@@ -8,7 +8,8 @@ export chat_id="-1002490515422"
 
 
 # Toolchain
-git clone --depth=1 https://gitlab.com/ThankYouMario/android_prebuilts_clang-standalone.git -b 17 clang
+export KERNEL_DIR="$(pwd)"
+#git clone --depth=1 https://gitlab.com/ThankYouMario/android_prebuilts_clang-standalone.git -b 17 clang
 git clone https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9.git --depth=1 gcc
 git clone https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9.git  --depth=1 gcc32
 export LINKER=ld.lld
@@ -17,15 +18,14 @@ export LINKER=ld.lld
 export KBUILD_COMPILER_STRING=$(${KERNEL_DIR}/clang/bin/clang --version | head -n 1 | perl -pe 's/\(http.*?\)//gs' | sed -e 's/  */ /g' -e 's/[[:space:]]*$//')
 export KBUILD_BUILD_HOST="$(grep ^NAME= /etc/os-release | cut -d= -f2 | tr -d '"')"
 export KBUILD_BUILD_USER="xenxynon"
-export COMMIT_HEAD=$(git log --oneline -1)
+export COMMIT_HEAD="$(git log --oneline -1)"
 export VERSION=v1
-export DISTRO=$(source /etc/os-release && echo "${NAME}")
+export DISTRO="$(source /etc/os-release && echo "${NAME}")"
 
 # files
 export IMAGE=out/arch/arm64/boot/Image
 export DTBO=out/arch/arm64/boot/dts/vendor/qcom/dtbo.img
 export DTB=out/arch/arm64/boot/dts/vendor/qcom/yupik.dtb
-export KERNEL_DIR="$(pwd)"
 export CI_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 
 # Device name
@@ -37,8 +37,8 @@ export DATE=$(TZ=Asia/Kolkata date +"%Y%m%d-%T")
 export TANGGAL=$(date +"%F%S")
 
 # Specify Final Zip Name
-export ZIPNAME=Neutrino-BETA
-export FINAL_ZIP=${ZIPNAME}-${VERSION}-${DEVICE}-${TANGGAL}.zip
+export ZIPNAME="Neutrino-BETA"
+export FINAL_ZIP="${ZIPNAME}-${VERSION}-${DEVICE}-${TANGGAL}.zip"
 
 # AnyKernel3
 rm -rf AnyKernel && git clone https://github.com/xenxynon/AnyKernel3
@@ -50,14 +50,6 @@ function sticker() {
         -d chat_id=$chat_id
 }
 
-function post_msg() {
-	curl -s -X POST "https://api.telegram.org/bot$token/sendMessage" \
-	-d chat_id="$chat_id" \
-	-d "disable_web_page_preview=true" \
-	-d "parse_mode=html" \
-	-d text="$1"
-	}
-
 function push() {
 	curl -F document=@$1 "https://api.telegram.org/bot$token/sendDocument" \
 	-F chat_id="$chat_id" \
@@ -65,14 +57,6 @@ function push() {
 	-F "parse_mode=html" \
 	-F caption="$2"
 	}
-
-function finerr() {
-    curl -s -X POST "https://api.telegram.org/bot$token/sendMessage" \
-        -d chat_id="$chat_id" \
-        -d "disable_web_page_preview=true" \
-        -d "parse_mode=markdown" \
-        -d text="Build throw an error(s)"
-}
 
 function compile() {
 START=$(date +"%s")
@@ -92,19 +76,19 @@ function zip() {
 	       push "build.log" "Build Throws Errors"
 	       #exit 1
 	   else
-	       post_msg " Kernel Compilation Finished. Started Zipping "
 
 	cp $IMAGE AnyKernel3
 	cp $DTBO AnyKernel3
         cp $DTB AnyKernel3/dtb
 
 	# Zipping and Push Kernel
-		cd AnyKernel3
-        zip -r9 ${FINAL_ZIP} * -x  .git README.md
-        MD5CHECK=$(md5sum "$FINAL_ZIP" | cut -d' ' -f1)
-        push "$FINAL_ZIP" "Build took : $(($DIFF / 60)) minute(s) and $(($DIFF % 60)) second(s) | For <b>$MODEL ($DEVICE)</b> | <b>${KBUILD_COMPILER_STRING}</b> | <b>MD5 Checksum : </b><code>$MD5CHECK</code>"
+	cd AnyKernel3
+        zip -r9 $FINAL_ZIP * -x  .git README.md
+#        MD5CHECK=$(md5sum "$FINAL_ZIP" | cut -d' ' -f1)
+        push "$FINAL_ZIP"
         cd ..
         push "build.log" "Build Completed Successfully"
+        fi
         }
 
 sticker

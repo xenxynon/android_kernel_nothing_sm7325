@@ -232,6 +232,4 @@ source "drivers/counter/Kconfig"
 
 source "drivers/nothing_stability/Kconfig"
 
-source "drivers/kernelsu/Kconfig"
-
 endmenu

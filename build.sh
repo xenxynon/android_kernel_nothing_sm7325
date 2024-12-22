@@ -8,7 +8,8 @@ export chat_id="-1002490515422"
 
 
 # Toolchain
-git clone --depth=1  https://github.com/kdrag0n/proton-clang.git clang
+#git clone --depth=1  https://github.com/kdrag0n/proton-clang.git clang
+mkdir clang && cd clang && wget https://github.com/ZyCromerZ/Clang/releases/download/20.0.0git-20241214-release/Clang-20.0.0git-20241214.tar.gz && tar -xf Clang* && cd ..
 export LINKER=ld.lld
 
 # Host
